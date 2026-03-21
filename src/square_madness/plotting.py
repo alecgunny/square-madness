@@ -140,12 +140,10 @@ def _build_heatmap(
     return p
 
 
-def generate_grid(
-    results_df: pd.DataFrame,
-    frequencies_df: pd.DataFrame,
+def initialize_grid(
     squares_df: pd.DataFrame,
-) -> Tabs:
-    # Ensure all 100 cells are present
+    frequencies_df: pd.DataFrame,
+) -> pd.DataFrame:
     full_grid = pd.DataFrame(
         [(wd, ld) for wd in range(10) for ld in range(10)],
         columns=["winning_digit", "losing_digit"],
@@ -156,49 +154,53 @@ def generate_grid(
     grid["frequency"] = grid["frequency"].fillna(0)
     total = grid["frequency"].sum()
     grid["prob"] = grid["frequency"] / total if total > 0 else 0.0
+    return grid
 
-    if not results_df.empty:
-        hits = results_df.groupby(["winning_digit", "losing_digit"]).size().reset_index(name="hits")
-        grid = grid.merge(hits, on=["winning_digit", "losing_digit"], how="left")
 
-        payouts = results_df.copy()
-        payouts["payout"] = payouts["round"].map(ROUND_PAYOUTS)
-        payouts_sum = (
-            payouts.groupby(["winning_digit", "losing_digit"])["payout"].sum().reset_index()
-        )
-        grid = grid.merge(payouts_sum, on=["winning_digit", "losing_digit"], how="left")
-
-        games_html_rows = []
-        for (wd, ld), group in results_df.groupby(["winning_digit", "losing_digit"]):
-            sections = []
-            for round_num, round_group in group.groupby("round"):
-                round_name = ROUND_NAMES[round_num]
-                game_lines = "<br>".join(
-                    f"{row['winning_team']}: {row['winning_score']}, "
-                    f"{row['losing_team']}: {row['losing_score']}"
-                    for _, row in round_group.iterrows()
-                )
-                sections.append(f'<b style="color:#aaaaaa">{round_name}</b><br>{game_lines}')
-            games_html_rows.append(
-                {
-                    "winning_digit": wd,
-                    "losing_digit": ld,
-                    "games_html": '<hr style="border-color:#555;margin:4px 0">'.join(sections),
-                }
-            )
-        games_html_df = pd.DataFrame(games_html_rows)
-        grid = grid.merge(games_html_df, on=["winning_digit", "losing_digit"], how="left")
-    else:
+def add_game_results(grid: pd.DataFrame, results_df: pd.DataFrame) -> pd.DataFrame:
+    if results_df.empty:
         grid["hits"] = 0
         grid["payout"] = 0
         grid["games_html"] = ""
+        return grid
+
+    hits = results_df.groupby(["winning_digit", "losing_digit"]).size().reset_index(name="hits")
+    grid = grid.merge(hits, on=["winning_digit", "losing_digit"], how="left")
+
+    payouts = results_df.copy()
+    payouts["payout"] = payouts["round"].map(ROUND_PAYOUTS)
+    payouts_sum = payouts.groupby(["winning_digit", "losing_digit"])["payout"].sum().reset_index()
+    grid = grid.merge(payouts_sum, on=["winning_digit", "losing_digit"], how="left")
+
+    games_html_rows = []
+    for (wd, ld), group in results_df.groupby(["winning_digit", "losing_digit"]):
+        sections = []
+        for round_num, round_group in group.groupby("round"):
+            round_name = ROUND_NAMES[round_num]
+            game_lines = "<br>".join(
+                f"{row['winning_team']}: {row['winning_score']}, "
+                f"{row['losing_team']}: {row['losing_score']}"
+                for _, row in round_group.iterrows()
+            )
+            sections.append(f'<b style="color:#aaaaaa">{round_name}</b><br>{game_lines}')
+        games_html_rows.append(
+            {
+                "winning_digit": wd,
+                "losing_digit": ld,
+                "games_html": '<hr style="border-color:#555;margin:4px 0">'.join(sections),
+            }
+        )
+    games_html_df = pd.DataFrame(games_html_rows)
+    grid = grid.merge(games_html_df, on=["winning_digit", "losing_digit"], how="left")
 
     grid["hits"] = grid["hits"].fillna(0).astype(int)
     grid["payout"] = grid["payout"].fillna(0).astype(int)
     grid["games_html"] = grid["games_html"].fillna("")
+    return grid
 
-    # Tab 1: Historical Frequency (continuous Viridis256)
-    p1 = _build_heatmap(
+
+def plot_frequency(grid: pd.DataFrame) -> figure:
+    return _build_heatmap(
         "Historical Frequency",
         grid,
         "prob",
@@ -214,11 +216,12 @@ def generate_grid(
         formatter=NumeralTickFormatter(format="0.00%"),
     )
 
-    # Tab 2: Hits (discrete Oranges)
+
+def plot_hits(grid: pd.DataFrame) -> figure:
     hit_vals = sorted(grid["hits"].unique().tolist())
     n_hits = min(max(len(hit_vals), 3), 9)
     hits_palette = list(reversed(Oranges[n_hits]))
-    p2 = _build_heatmap(
+    return _build_heatmap(
         "Hits",
         grid,
         "hits",
@@ -238,17 +241,17 @@ def generate_grid(
         extra_cols={"games_html": grid["games_html"].tolist()},
     )
 
-    # Tab 3: Payouts (discrete or continuous)
+
+def plot_payouts(grid: pd.DataFrame) -> figure:
     payout_vals = sorted(grid["payout"].unique().tolist())
     n_unique = len(payout_vals)
     if n_unique < DISCRETE_THRESHOLD:
         n_colors = min(max(n_unique, 3), 11)
-        payouts_palette = RdYlGn[n_colors]
-        p3 = _build_heatmap(
+        return _build_heatmap(
             "Payouts",
             grid,
             "payout",
-            payouts_palette,
+            RdYlGn[n_colors],
             grid["payout"].min() - 0.5,
             grid["payout"].max() + 0.5,
             unique_vals=payout_vals,
@@ -259,27 +262,35 @@ def generate_grid(
                 ("Total Payout", "$@values"),
             ],
         )
-    else:
-        p3 = _build_heatmap(
-            "Payouts",
-            grid,
-            "payout",
-            Viridis256,
-            grid["payout"].min(),
-            grid["payout"].max(),
-            tooltips=[
-                ("Gambler", "@gamblers"),
-                ("Winning Digit", "@x"),
-                ("Losing Digit", "@y"),
-                ("Total Payout", "$@values"),
-            ],
-        )
+    return _build_heatmap(
+        "Payouts",
+        grid,
+        "payout",
+        Viridis256,
+        grid["payout"].min(),
+        grid["payout"].max(),
+        tooltips=[
+            ("Gambler", "@gamblers"),
+            ("Winning Digit", "@x"),
+            ("Losing Digit", "@y"),
+            ("Total Payout", "$@values"),
+        ],
+    )
+
+
+def generate_grid(
+    results_df: pd.DataFrame,
+    frequencies_df: pd.DataFrame,
+    squares_df: pd.DataFrame,
+) -> Tabs:
+    grid = initialize_grid(squares_df, frequencies_df)
+    grid = add_game_results(grid, results_df)
 
     return Tabs(
         tabs=[
-            TabPanel(child=p1, title="Historical Frequency"),
-            TabPanel(child=p2, title="Hits"),
-            TabPanel(child=p3, title="Payouts"),
+            TabPanel(child=plot_frequency(grid), title="Historical Frequency"),
+            TabPanel(child=plot_hits(grid), title="Hits"),
+            TabPanel(child=plot_payouts(grid), title="Payouts"),
         ]
     )
 
