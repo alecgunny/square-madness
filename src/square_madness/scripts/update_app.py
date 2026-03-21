@@ -1,6 +1,6 @@
 from jsonargparse import ArgumentParser
 
-from square_madness.plotting import main as generate_grid_main
+from square_madness.plotting.app import main as generate_grid_main
 from square_madness.utils import configure_logging
 
 
@@ -8,11 +8,13 @@ def main(
     frequencies_file: str = "score_frequencies.csv",
     squares_file: str = "squares.csv",
     output_file: str = "app.html",
+    theme_name: str = "nord",
 ) -> None:
     generate_grid_main(
         frequencies_file=frequencies_file,
         squares_file=squares_file,
         output_file=output_file,
+        theme_name=theme_name,
     )
 
 

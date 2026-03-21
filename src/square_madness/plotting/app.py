@@ -3,14 +3,15 @@ from pathlib import Path
 
 import pandas as pd
 from bokeh.embed import file_html
-from bokeh.models import TabPanel, Tabs
+from bokeh.layouts import row
+from bokeh.models import InlineStyleSheet, Row, TabPanel, Tabs
 from bokeh.resources import CDN
-from jsonargparse import ArgumentParser
 
+from square_madness.plotting.bar import generate_bar
 from square_madness.plotting.heatmap import plot_frequency, plot_hits, plot_payouts
-from square_madness.plotting.utils import BG_COLOR, THEME
+from square_madness.plotting.utils import THEMES
 from square_madness.scraper import update_scores
-from square_madness.utils import ROUND_NAMES, ROUND_PAYOUTS, configure_logging
+from square_madness.utils import ROUND_NAMES, ROUND_PAYOUTS
 
 logger = logging.getLogger(__name__)
 
@@ -78,46 +79,46 @@ def generate_grid(
     results_df: pd.DataFrame,
     frequencies_df: pd.DataFrame,
     squares_df: pd.DataFrame,
-) -> Tabs:
+    tabs_stylesheet: InlineStyleSheet,
+    bar_bg_color: str,
+) -> Row:
     grid = initialize_grid(squares_df, frequencies_df)
     grid = add_game_results(grid, results_df)
 
-    return Tabs(
+    heatmap = Tabs(
         tabs=[
             TabPanel(child=plot_frequency(grid), title="Historical Frequency"),
             TabPanel(child=plot_hits(grid), title="Hits"),
             TabPanel(child=plot_payouts(grid), title="Payouts"),
-        ]
+        ],
+        stylesheets=[tabs_stylesheet],
     )
+
+    return row(heatmap, generate_bar(grid, tabs_stylesheet, bar_bg_color))
 
 
 def main(
     frequencies_file: str = "score_frequencies.csv",
     squares_file: str = "squares.csv",
-    output_file: str = "grid.html",
+    output_file: str = "app.html",
+    theme_name: str = "discord",
 ) -> None:
+    plot_theme = THEMES[theme_name]
     frequencies_df = pd.read_csv(frequencies_file)
     squares_df = pd.read_csv(squares_file)
     results_df = update_scores()
-    layout = generate_grid(results_df, frequencies_df, squares_df)
-    html = file_html(layout, CDN, title="Square Madness", theme=THEME)
+    layout = generate_grid(
+        results_df,
+        frequencies_df,
+        squares_df,
+        plot_theme.tabs_stylesheet,
+        plot_theme.bar_bg_color,
+    )
+    html = file_html(layout, CDN, title="Square Madness", theme=plot_theme.theme)
     html = html.replace(
         "</head>",
-        f"<style>body {{ background-color: {BG_COLOR}; margin: 0; }}</style>\n</head>",
+        f"<style>body {{ background-color: {plot_theme.bg_color}; margin: 0; }}</style>\n</head>",
         1,
     )
     Path(output_file).write_text(html)
     logger.info("Saved grid to %s", output_file)
-
-
-def cli() -> None:
-    configure_logging()
-
-    parser = ArgumentParser()
-    parser.add_function_arguments(main)
-    args = parser.parse_args()
-    main(**vars(args))
-
-
-if __name__ == "__main__":
-    cli()
