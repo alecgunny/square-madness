@@ -3,11 +3,20 @@ from pathlib import Path
 
 import pandas as pd
 from bokeh.embed import file_html
-from bokeh.models import ColorBar, ColumnDataSource, FixedTicker, HoverTool, LinearColorMapper, NumeralTickFormatter, TabPanel, Tabs
-from bokeh.resources import CDN
-from bokeh.themes import Theme
+from bokeh.models import (
+    ColorBar,
+    ColumnDataSource,
+    FixedTicker,
+    HoverTool,
+    LinearColorMapper,
+    NumeralTickFormatter,
+    TabPanel,
+    Tabs,
+)
 from bokeh.palettes import Oranges, RdYlGn, Viridis256
 from bokeh.plotting import figure
+from bokeh.resources import CDN
+from bokeh.themes import Theme
 from jsonargparse import ArgumentParser
 
 from square_madness.scraper import update_scores
@@ -15,7 +24,14 @@ from square_madness.scraper import update_scores
 logger = logging.getLogger(__name__)
 
 ROUND_PAYOUTS = {0: 20, 1: 40, 2: 80, 3: 160, 4: 320, 5: 800}
-ROUND_NAMES = {0: "1st Round", 1: "2nd Round", 2: "Sweet 16", 3: "Elite 8", 4: "Final Four", 5: "National Championship"}
+ROUND_NAMES = {
+    0: "1st Round",
+    1: "2nd Round",
+    2: "Sweet 16",
+    3: "Elite 8",
+    4: "Final Four",
+    5: "National Championship",
+}
 
 DIGITS = [str(i) for i in range(10)]
 DISCRETE_THRESHOLD = 7
@@ -128,7 +144,6 @@ def generate_grid(
     frequencies_df: pd.DataFrame,
     squares_df: pd.DataFrame,
 ) -> Tabs:
-
     # Ensure all 100 cells are present
     full_grid = pd.DataFrame(
         [(wd, ld) for wd in range(10) for ld in range(10)],
@@ -142,19 +157,13 @@ def generate_grid(
     grid["prob"] = grid["frequency"] / total if total > 0 else 0.0
 
     if not results_df.empty:
-        hits = (
-            results_df.groupby(["winning_digit", "losing_digit"])
-            .size()
-            .reset_index(name="hits")
-        )
+        hits = results_df.groupby(["winning_digit", "losing_digit"]).size().reset_index(name="hits")
         grid = grid.merge(hits, on=["winning_digit", "losing_digit"], how="left")
 
         payouts = results_df.copy()
         payouts["payout"] = payouts["round"].map(ROUND_PAYOUTS)
         payouts_sum = (
-            payouts.groupby(["winning_digit", "losing_digit"])["payout"]
-            .sum()
-            .reset_index()
+            payouts.groupby(["winning_digit", "losing_digit"])["payout"].sum().reset_index()
         )
         grid = grid.merge(payouts_sum, on=["winning_digit", "losing_digit"], how="left")
 
@@ -168,12 +177,13 @@ def generate_grid(
                     f"{row['losing_team']}: {row['losing_score']}"
                     for _, row in round_group.iterrows()
                 )
-                sections.append(
-                    f'<b style="color:#aaaaaa">{round_name}</b><br>{game_lines}'
-                )
+                sections.append(f'<b style="color:#aaaaaa">{round_name}</b><br>{game_lines}')
             games_html_rows.append(
-                {"winning_digit": wd, "losing_digit": ld,
-                 "games_html": '<hr style="border-color:#555;margin:4px 0">'.join(sections)}
+                {
+                    "winning_digit": wd,
+                    "losing_digit": ld,
+                    "games_html": '<hr style="border-color:#555;margin:4px 0">'.join(sections),
+                }
             )
         games_html_df = pd.DataFrame(games_html_rows)
         grid = grid.merge(games_html_df, on=["winning_digit", "losing_digit"], how="left")

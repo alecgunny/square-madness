@@ -7,8 +7,7 @@ import requests
 logger = logging.getLogger(__name__)
 
 SCOREBOARD_URL = (
-    "https://site.api.espn.com/apis/site/v2/sports/basketball"
-    "/mens-college-basketball/scoreboard"
+    "https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard"
 )
 ROUND_ORDER = {
     "1st Round": 0,
@@ -29,9 +28,7 @@ def _parse_round(headline: str) -> int | None:
 
 
 def _fetch_date(d: date) -> list[dict]:
-    response = requests.get(
-        SCOREBOARD_URL, params={"limit": 200, "dates": d.strftime("%Y%m%d")}
-    )
+    response = requests.get(SCOREBOARD_URL, params={"limit": 200, "dates": d.strftime("%Y%m%d")})
     response.raise_for_status()
 
     records = []
@@ -70,9 +67,7 @@ def _fetch_date(d: date) -> list[dict]:
 
 def update_scores() -> pd.DataFrame:
     today = date.today()
-    logger.info(
-        "Fetching completed tournament games from %s to %s", TOURNAMENT_START, today
-    )
+    logger.info("Fetching completed tournament games from %s to %s", TOURNAMENT_START, today)
 
     records = []
     d = TOURNAMENT_START

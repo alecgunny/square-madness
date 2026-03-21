@@ -35,11 +35,7 @@ def main(output_file: str = "score_frequencies.csv") -> None:
     df["winning_digit"] = df["WScore"] % 10
     df["losing_digit"] = df["LScore"] % 10
 
-    freq = (
-        df.groupby(["winning_digit", "losing_digit"])
-        .size()
-        .reset_index(name="frequency")
-    )
+    freq = df.groupby(["winning_digit", "losing_digit"]).size().reset_index(name="frequency")
     freq.to_csv(output_file, index=False)
     logger.info("Wrote %d rows to %s", len(freq), output_file)
 
