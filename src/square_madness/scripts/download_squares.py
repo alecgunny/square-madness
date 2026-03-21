@@ -5,6 +5,8 @@ import pandas as pd
 from google.auth import default
 from jsonargparse import ArgumentParser
 
+from square_madness.log import configure
+
 logger = logging.getLogger(__name__)
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
@@ -45,7 +47,7 @@ def main(
 
 
 def cli() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    configure()
 
     parser = ArgumentParser()
     parser.add_function_arguments(main)

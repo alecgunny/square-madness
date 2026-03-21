@@ -7,6 +7,8 @@ import pandas as pd
 from jsonargparse import ArgumentParser
 from kaggle import KaggleApi
 
+from square_madness.log import configure
+
 logger = logging.getLogger(__name__)
 
 COMPETITION = "march-machine-learning-mania-2026"
@@ -41,7 +43,7 @@ def main(output_file: str = "score_frequencies.csv") -> None:
 
 
 def cli() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    configure()
 
     parser = ArgumentParser()
     parser.add_function_arguments(main)

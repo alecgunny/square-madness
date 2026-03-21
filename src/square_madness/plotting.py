@@ -19,6 +19,7 @@ from bokeh.resources import CDN
 from bokeh.themes import Theme
 from jsonargparse import ArgumentParser
 
+from square_madness.log import configure
 from square_madness.scraper import update_scores
 
 logger = logging.getLogger(__name__)
@@ -303,7 +304,7 @@ def main(
 
 
 def cli() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    configure()
 
     parser = ArgumentParser()
     parser.add_function_arguments(main)
