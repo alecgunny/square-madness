@@ -5,7 +5,7 @@ import pandas as pd
 from google.auth import default
 from jsonargparse import ArgumentParser
 
-from square_madness.log import configure
+from square_madness.utils import configure_logging
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ def main(
 
 
 def cli() -> None:
-    configure()
+    configure_logging()
 
     parser = ArgumentParser()
     parser.add_function_arguments(main)

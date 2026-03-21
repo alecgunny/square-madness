@@ -22,10 +22,10 @@ jobs:
         run: uv sync
 
       - name: Generate grid
-        run: uv run generate-grid
+        run: uv run update-app
 
       - name: Prepare deploy
-        run: mkdir deploy && cp grid.html deploy/index.html
+        run: mkdir deploy && cp app.html deploy/index.html
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4

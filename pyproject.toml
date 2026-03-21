@@ -18,6 +18,7 @@ dependencies = [
 download-scores = "square_madness.scripts.download_scores:cli"
 download-squares = "square_madness.scripts.download_squares:cli"
 generate-grid = "square_madness.plotting:cli"
+update-app = "square_madness.scripts.update_app:cli"
 
 [build-system]
 requires = ["hatchling"]
